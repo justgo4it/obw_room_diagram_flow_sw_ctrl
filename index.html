@@ -577,11 +577,11 @@ function renderQuiz(root,task,qs,qc){
   if(sub) sub.onclick=()=>{
     if(!state.picked) return;
     if(state.picked===task.correct){
-      state.feedback="right"; state.revealed[state.quizIdx]=true;
-      state.phase="verify"; state.quizStepIdx=0;
-      if (state.quizIdx == (qs.length-1)) {
+      if (state.quizIdx == QUIZ_TASKS.length-1) {
         endGame();
       }
+      state.feedback="right"; state.revealed[state.quizIdx]=true;
+      state.phase="verify"; state.quizStepIdx=0;
     } else state.feedback="wrong";
     render();
   };
