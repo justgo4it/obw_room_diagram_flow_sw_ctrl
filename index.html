@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Abstraktes Denkvermögen — Flussdiagramme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --background:oklch(0.16 0.025 260);
+    --foreground:oklch(0.97 0.01 250);
+    --card:oklch(0.21 0.03 260);
+    --primary:oklch(0.78 0.18 165);
+    --primary-foreground:oklch(0.15 0.03 260);
+    --secondary:oklch(0.28 0.04 260);
+    --muted:oklch(0.24 0.03 260);
+    --muted-foreground:oklch(0.7 0.03 255);
+    --accent:oklch(0.7 0.2 320);
+    --accent-foreground:oklch(0.15 0.03 260);
+    --destructive:oklch(0.65 0.25 25);
+    --border:oklch(0.32 0.04 260);
+    --grid:oklch(0.3 0.04 260 / 0.4);
+  }
+  *{box-sizing:border-box;border-color:var(--border)}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--background);color:var(--foreground);
+    font-family:'Inter',system-ui,sans-serif;
+    background-image:
+      linear-gradient(var(--grid) 1px,transparent 1px),
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:48px 48px;
+    overflow:hidden;
+  }
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+  .glow-primary{box-shadow:0 0 24px -4px oklch(0.78 0.18 165 / 0.5)}
+  .glow-accent{box-shadow:0 0 24px -4px oklch(0.7 0.2 320 / 0.5)}
+  .text-glow{text-shadow:0 0 18px oklch(0.78 0.18 165 / 0.6)}
+  @keyframes flow-pulse{0%,100%{opacity:.4}50%{opacity:1}}
+  .flow-pulse{animation:flow-pulse 1.4s ease-in-out infinite}
+  @keyframes pop-in{0%{transform:scale(.5) rotate(-10deg);opacity:0}60%{transform:scale(1.15) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+  .pop-in{animation:pop-in .5s cubic-bezier(.34,1.56,.64,1) both}
+
+  /* layout */
+  .app{height:100vh;width:100vw;display:flex;flex-direction:column;padding:16px;gap:12px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-shrink:0}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo{width:40px;height:40px;border-radius:8px;background:var(--primary);color:var(--primary-foreground);
+        display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:700}
+  h1{font-size:20px;font-weight:700;margin:0;line-height:1.2}
+  h1 .accent{color:var(--primary)}
+  .sub{font-size:12px;color:var(--muted-foreground);margin:2px 0 0}
+  .sub code{font-family:'JetBrains Mono',monospace;color:var(--primary)}
+  .modes{display:flex;gap:8px;flex-shrink:0}
+  .btn{padding:8px 16px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;
+       border:1px solid var(--border);background:var(--card);color:var(--foreground);transition:all .2s}
+  .btn:hover{border-color:oklch(0.78 0.18 165 / 0.5)}
+  .btn.active-primary{background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)}
+  .btn.active-accent{background:var(--accent);color:var(--accent-foreground);border-color:var(--accent)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  main{flex:1;display:grid;grid-template-columns:repeat(12,1fr);gap:12px;min-height:0}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;min-height:0}
+  .left{grid-column:span 8}
+  .right{grid-column:span 4;display:flex;flex-direction:column;gap:12px;min-height:0}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-shrink:0}
+  .panel-head h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted-foreground);margin:0;font-weight:600;display:flex;align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--primary)}
+  .stepcount{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--muted-foreground)}
+
+  svg.flow{width:100%;height:100%;flex:1;min-height:0}
+
+  .label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;color:var(--muted-foreground)}
+  select,input[type=number]{
+    width:100%;margin-top:4px;background:var(--background);border:1px solid var(--border);
+    border-radius:6px;padding:6px 8px;font-size:14px;color:var(--foreground);
+    font-family:'JetBrains Mono',monospace;outline:none}
+  select:focus,input:focus{border-color:var(--primary)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .num{display:flex;align-items:center;background:var(--background);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-top:4px}
+  .num button{background:none;border:none;color:var(--foreground);padding:6px 10px;cursor:pointer;font-size:14px}
+  .num button:hover{background:var(--muted)}
+  .num input{border:none;text-align:center;margin:0;font-family:'JetBrains Mono',monospace}
+  .num input::-webkit-outer-spin-button,.num input::-webkit-inner-spin-button{-webkit-appearance:none}
+
+  .controls{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
+  .actions{display:flex;gap:8px;padding-top:4px}
+  .actions .btn{flex:1;padding:8px 12px;font-size:14px}
+  .btn-primary{background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)}
+  .btn-accent{background:var(--accent);color:var(--accent-foreground);border-color:var(--accent)}
+  .btn-secondary{background:var(--secondary);color:var(--foreground)}
+
+  .watch{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;flex:1;display:flex;flex-direction:column;min-height:0}
+  .vars{margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:'JetBrains Mono',monospace;font-size:13px}
+  .var{background:var(--background);border:1px solid var(--border);border-radius:6px;padding:6px 8px;display:flex;justify-content:space-between}
+  .var .k{color:var(--muted-foreground)}
+  .var .v{color:var(--primary);font-weight:700}
+  .log{margin-top:12px;flex:1;min-height:0;overflow-y:auto;background:var(--background);border:1px solid var(--border);
+       border-radius:6px;padding:8px;font-size:12px;font-family:'JetBrains Mono',monospace;line-height:1.5}
+  .log .head{color:var(--muted-foreground);margin-bottom:4px}
+  .log .line{color:var(--muted-foreground)}
+  .log .line.cur{color:var(--primary)}
+  .log .idx{opacity:.6}
+  .result{margin-top:8px;padding:8px;border-radius:6px;background:oklch(0.78 0.18 165 / 0.1);border:1px solid oklch(0.78 0.18 165 / 0.3);font-size:14px}
+  .result .t{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted-foreground)}
+  .result .v{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--primary)}
+
+  /* quiz */
+  .word{display:flex;gap:6px;margin-top:6px}
+  .box{flex:1;aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;
+       font-family:'JetBrains Mono',monospace;font-weight:700;font-size:20px;border:2px dashed var(--border);
+       background:var(--background);color:oklch(0.7 0.03 255 / 0.3);transition:all .3s}
+  .box.on{background:var(--accent);color:var(--accent-foreground);border:2px solid var(--accent);box-shadow:0 0 24px -4px oklch(0.7 0.2 320 / 0.5)}
+  .qbadge{font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:2px 6px;border-radius:4px;background:oklch(0.7 0.2 320 / 0.2);color:var(--accent);font-weight:700}
+  .q{font-size:14px;margin:6px 0 0;line-height:1.4}
+  .opts{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+  .opt{width:100%;text-align:left;padding:8px 12px;border-radius:6px;border:1px solid var(--border);
+       background:var(--background);font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--foreground);cursor:pointer;transition:all .2s}
+  .opt:hover{border-color:oklch(0.78 0.18 165 / 0.4)}
+  .opt.sel{border-color:var(--primary);background:oklch(0.78 0.18 165 / 0.1);color:var(--primary)}
+  .err{margin-top:8px;font-size:12px;color:var(--destructive);font-weight:600}
+  .ok{margin-top:8px;padding:8px;border-radius:6px;background:oklch(0.78 0.18 165 / 0.1);border:1px solid oklch(0.78 0.18 165 / 0.3);font-size:12px}
+  .ok b{font-family:'JetBrains Mono',monospace;color:var(--primary)}
+  .done{margin-top:8px;padding:8px;border-radius:6px;background:oklch(0.7 0.2 320 / 0.15);border:1px solid var(--accent);text-align:center;font-weight:700;color:var(--accent)}
+  .spacer{margin-top:auto}
+  .qpanel{flex:1;display:flex;flex-direction:column;min-height:0}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="logo mono">{ }</div>
+      <div>
+        <h1>Abstraktes Denkvermögen <span class="accent text-glow">in Form eines Flussdiagramms</span></h1>
+        <p class="sub">Ein Flussdiagramm visualisiert den Programmablauf. <code>Kontrollstrukturen</code> (if, for, while…) steuern, welcher Pfad ausgeführt wird.</p>
+      </div>
+    </div>
+    <div class="modes">
+      <button id="mode-training" class="btn active-primary glow-primary">Training</button>
+      <button id="mode-quiz" class="btn">Lernzielkontrolle</button>
+    </div>
+  </header>
+  <main>
+    <section class="panel left">
+      <div class="panel-head">
+        <h2><span class="dot flow-pulse"></span><span id="chart-title">Flussdiagramm — if</span></h2>
+        <div class="stepcount" id="stepcount">Schritt 1 / 1</div>
+      </div>
+      <svg class="flow" id="chart" viewBox="0 0 560 540"></svg>
+    </section>
+    <aside class="right" id="right"></aside>
+  </main>
+</div>
+
+<script src="scripts/hub-bridge.js"></script>
+<script>
+//================= FLOW ENGINE =================
+const ALL_OPS = ["==","!=","<",">","<=",">="];
+const STRUCTURE_LABEL = {
+  "if":"if","if-else":"if / else","if-elseif-else":"if / else if / else",
+  "for":"for","while":"while","do-while":"do / while"
+};
+function evalOp(a,b,op){
+  switch(op){case"==":return a===b;case"!=":return a!==b;case"<":return a<b;
+  case">":return a>b;case"<=":return a<=b;case">=":return a>=b;}
+}
+const MAX_LOOP=50;
+function buildSteps(cfg){
+  const {kind,op,x,y}=cfg; const steps=[];
+  if(kind==="if"){
+    steps.push({node:"start",desc:"Programm startet",vars:{}});
+    steps.push({node:"init",desc:`x = ${x}, y = ${y} initialisieren`,vars:{x,y}});
+    const c=evalOp(x,y,op);
+    steps.push({node:"cond",desc:`Prüfe Bedingung: x ${op} y  →  ${x} ${op} ${y}  =  ${c}`,vars:{x,y,"x op y":c},edge:c?"cond-true":"cond-false"});
+    if(c) steps.push({node:"then",desc:"Bedingung erfüllt → Block wird ausgeführt",vars:{x,y,ergebnis:"Bedingung erfüllt"}});
+    steps.push({node:"end",desc:"Programm endet",vars:{x,y,ergebnis:c?"Bedingung erfüllt":"Bedingung nicht erfüllt"},result:c?"Bedingung erfüllt":"Bedingung nicht erfüllt"});
+  }
+  if(kind==="if-else"){
+    steps.push({node:"start",desc:"Programm startet",vars:{}});
+    steps.push({node:"init",desc:`x = ${x}, y = ${y} initialisieren`,vars:{x,y}});
+    const c=evalOp(x,y,op);
+    steps.push({node:"cond",desc:`Prüfe: x ${op} y  →  ${x} ${op} ${y}  =  ${c}`,vars:{x,y,"x op y":c},edge:c?"cond-true":"cond-false"});
+    steps.push({node:c?"then":"else",desc:c?"if-Block ausgeführt":"else-Block ausgeführt",vars:{x,y,ergebnis:c?"if-Bedingung erfüllt":"else-Bedingung erfüllt"}});
+    steps.push({node:"end",desc:"Programm endet",vars:{x,y,ergebnis:c?"if-Bedingung erfüllt":"else-Bedingung erfüllt"},result:c?"if-Bedingung erfüllt":"else-Bedingung erfüllt"});
+  }
+  if(kind==="if-elseif-else"){
+    const op2=cfg.op2||"==";
+    steps.push({node:"start",desc:"Programm startet",vars:{}});
+    steps.push({node:"init",desc:`x = ${x}, y = ${y} initialisieren`,vars:{x,y}});
+    const c1=evalOp(x,y,op);
+    steps.push({node:"cond1",desc:`Prüfe 1. Bedingung: x ${op} y  →  ${c1}`,vars:{x,y,"1. Bed.":c1},edge:c1?"cond1-true":"cond1-false"});
+    if(c1){
+      steps.push({node:"then",desc:"if-Block ausgeführt",vars:{x,y,ergebnis:"if-Bedingung erfüllt"}});
+      steps.push({node:"end",desc:"Programm endet",vars:{x,y,ergebnis:"if-Bedingung erfüllt"},result:"if-Bedingung erfüllt"});
+    } else {
+      const c2=evalOp(x,y,op2);
+      steps.push({node:"cond2",desc:`Prüfe 2. Bedingung: x ${op2} y  →  ${c2}`,vars:{x,y,"2. Bed.":c2},edge:c2?"cond2-true":"cond2-false"});
+      if(c2){
+        steps.push({node:"elseif",desc:"else-if-Block ausgeführt",vars:{x,y,ergebnis:"if/else-Bedingung erfüllt"}});
+        steps.push({node:"end",desc:"Programm endet",vars:{x,y,ergebnis:"if/else-Bedingung erfüllt"},result:"if/else-Bedingung erfüllt"});
+      } else {
+        steps.push({node:"else",desc:"else-Block ausgeführt",vars:{x,y,ergebnis:"else-Bedingung erfüllt"}});
+        steps.push({node:"end",desc:"Programm endet",vars:{x,y,ergebnis:"else-Bedingung erfüllt"},result:"else-Bedingung erfüllt"});
+      }
+    }
+  }
+  if(kind==="for"){
+    steps.push({node:"start",desc:"Programm startet",vars:{}});
+    steps.push({node:"init",desc:`Initialisierung: i = ${x}, y = ${y}, count = 0`,vars:{i:x,y,count:0}});
+    let i=x,count=0,s=0;
+    while(s++<MAX_LOOP){
+      const ok=evalOp(i,y,op);
+      steps.push({node:"cond",desc:`Prüfe Bedingung: i ${op} y  →  ${i} ${op} ${y}  =  ${ok}`,vars:{i,y,count},edge:ok?"cond-true":"cond-false"});
+      if(!ok) break;
+      count++; i++;
+      steps.push({node:"body",desc:`Body: count = ${count}, i = ${i}`,vars:{i,y,count},edge:"back"});
+    }
+    steps.push({node:"end",desc:`Schleife verlassen — ${count}× durchlaufen`,vars:{i,y,count},result:`${count}`});
+  }
+  if(kind==="while"){
+    steps.push({node:"start",desc:"Programm startet",vars:{}});
+    steps.push({node:"init",desc:`x = ${x}, y = ${y}, count = 0`,vars:{x,y,count:0}});
+    let cx=x,count=0,s=0;
+    while(s++<MAX_LOOP){
+      const ok=evalOp(cx,y,op);
+      steps.push({node:"cond",desc:`Kopf-Prüfung: x ${op} y  →  ${cx} ${op} ${y}  =  ${ok}`,vars:{x:cx,y,count},edge:ok?"cond-true":"cond-false"});
+      if(!ok) break;
+      count++; cx++;
+      steps.push({node:"body",desc:`Body: count = ${count}, x = ${cx}`,vars:{x:cx,y,count},edge:"back"});
+    }
+    steps.push({node:"end",desc:count===0?"Bedingung war initial falsch — Schleife 0× durchlaufen (kopfgesteuert!)":`Schleife verlassen — ${count}× durchlaufen`,vars:{x:cx,y,count},result:`${count}`});
+  }
+  if(kind==="do-while"){
+    steps.push({node:"start",desc:"Programm startet",vars:{}});
+    steps.push({node:"init",desc:`x = ${x}, y = ${y}, count = 0`,vars:{x,y,count:0}});
+    let cx=x,count=0,s=0;
+    while(s++<MAX_LOOP){
+      count++; cx++;
+      steps.push({node:"body",desc:`Body (zuerst!): count = ${count}, x = ${cx}`,vars:{x:cx,y,count}});
+      const ok=evalOp(cx,y,op);
+      steps.push({node:"cond",desc:`Fuß-Prüfung: x ${op} y  →  ${cx} ${op} ${y}  =  ${ok}`,vars:{x:cx,y,count},edge:ok?"cond-true":"cond-false"});
+      if(!ok) break;
+    }
+    steps.push({node:"end",desc:`Schleife verlassen — ${count}× durchlaufen (mind. 1× garantiert!)`,vars:{x:cx,y,count},result:`${count}`});
+  }
+  return steps;
+}
+function computeResult(cfg){
+  const s=buildSteps(cfg);
+  for(let i=s.length-1;i>=0;i--) if(s[i].result!==undefined) return s[i].result;
+  return "";
+}
+
+const QUIZ_WORD="REGGAE";
+const QUIZ_TASKS=[
+  {letter:"R",kind:"if",cfg:{kind:"if",op:">",x:7,y:5},
+   question:"if (x > y) mit x = 7, y = 5 — was wird ausgegeben?",
+   options:["Bedingung erfüllt","Bedingung nicht erfüllt"],correct:"Bedingung erfüllt"},
+  {letter:"E",kind:"if-else",cfg:{kind:"if-else",op:"==",x:4,y:9},
+   question:"if (x == y) sonst else — mit x = 4, y = 9. Welcher Block läuft?",
+   options:["if-Bedingung erfüllt","else-Bedingung erfüllt"],correct:"else-Bedingung erfüllt"},
+  {letter:"G",kind:"if-elseif-else",cfg:{kind:"if-elseif-else",op:"<",op2:"==",x:6,y:6},
+   question:"if (x < y), else if (x == y), sonst else — mit x = 6, y = 6.",
+   options:["if-Bedingung erfüllt","if/else-Bedingung erfüllt","else-Bedingung erfüllt"],correct:"if/else-Bedingung erfüllt"},
+  {letter:"G",kind:"for",cfg:{kind:"for",op:"<",x:0,y:4},
+   question:"for (i = 0; i < 4; i++) — wie oft läuft der Body?",
+   options:["0","3","4","5"],correct:"4"},
+  {letter:"A",kind:"while",cfg:{kind:"while",op:"<",x:5,y:3},
+   question:"while (x < y) mit Start x = 5, y = 3 (im Body x++) — wie oft läuft der Body?",
+   options:["0","1","2","3"],correct:"0"},
+  {letter:"E",kind:"do-while",cfg:{kind:"do-while",op:"<",x:5,y:3},
+   question:"do { x++; } while (x < y); mit Start x = 5, y = 3 — wie oft läuft der Body?",
+   options:["0","1","2","3"],correct:"1"},
+];
+
+//================= FLOWCHART RENDERING =================
+const W=560,H=540,cx=W/2;
+function svg(tag,attrs={},children=""){
+  const ns="http://www.w3.org/2000/svg";
+  const el=document.createElementNS(ns,tag);
+  for(const k in attrs) if(attrs[k]!==undefined&&attrs[k]!==null) el.setAttribute(k,attrs[k]);
+  if(typeof children==="string") el.innerHTML=children;
+  else if(Array.isArray(children)) children.forEach(c=>c&&el.appendChild(c));
+  return el;
+}
+function fill(id,a){return id===a?"var(--primary)":"var(--card)"}
+function strk(id,a){return id===a?"var(--primary)":"var(--border)"}
+function txtC(id,a){return id===a?"var(--primary-foreground)":"var(--foreground)"}
+
+function Terminal(x,y,label,id,a){
+  const g=svg("g");
+  const r=svg("rect",{x:x-50,y:y-22,width:100,height:44,rx:22,
+    fill:fill(id,a),stroke:strk(id,a),"stroke-width":2,
+    style:"transition:all .3s"});
+  if(id===a) r.setAttribute("class","glow-primary-svg");
+  const t=svg("text",{x,y:y+5,"text-anchor":"middle","font-size":14,"font-weight":600,fill:txtC(id,a)},label);
+  g.append(r,t); return g;
+}
+function Process(x,y,label,id,a,w=180,h=44){
+  const g=svg("g");
+  g.append(svg("rect",{x:x-w/2,y:y-h/2,width:w,height:h,rx:6,
+    fill:fill(id,a),stroke:strk(id,a),"stroke-width":2,style:"transition:all .3s"}));
+  g.append(svg("text",{x,y:y+5,"text-anchor":"middle","font-size":13,
+    "font-family":"JetBrains Mono, monospace","font-weight":500,fill:txtC(id,a)},escapeXml(label)));
+  return g;
+}
+function Decision(x,y,label,id,a,w=180,h=88){
+  const g=svg("g");
+  const pts=`${x},${y-h/2} ${x+w/2},${y} ${x},${y+h/2} ${x-w/2},${y}`;
+  g.append(svg("polygon",{points:pts,fill:fill(id,a),stroke:strk(id,a),"stroke-width":2,style:"transition:all .3s"}));
+  g.append(svg("text",{x,y:y-2,"text-anchor":"middle","font-size":13,
+    "font-family":"JetBrains Mono, monospace","font-weight":600,fill:txtC(id,a)},escapeXml(label)));
+  g.append(svg("text",{x,y:y+14,"text-anchor":"middle","font-size":13,"font-weight":700,fill:txtC(id,a)},"?"));
+  return g;
+}
+function Edge(d,id,activeEdge,label,dashed){
+  const g=svg("g");
+  const isA=id===activeEdge;
+  const p=svg("path",{d,fill:"none",
+    stroke:isA?"var(--primary)":"var(--border)",
+    "stroke-width":isA?3:2,
+    "stroke-dasharray":dashed?"6 4":null,
+    "marker-end":`url(#arrow-${isA?"active":"default"})`,
+    style:"transition:all .3s"});
+  if(isA) p.setAttribute("class","flow-pulse");
+  g.append(p);
+  if(label){
+    g.append(svg("rect",{x:label.x-16,y:label.y-11,width:32,height:20,rx:4,
+      fill:"var(--background)",stroke:isA?"var(--primary)":"var(--border)"}));
+    g.append(svg("text",{x:label.x,y:label.y+4,"text-anchor":"middle","font-size":11,"font-weight":600,
+      fill:isA?"var(--primary)":"var(--muted-foreground)"},label.text));
+  }
+  return g;
+}
+function escapeXml(s){return String(s).replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]))}
+
+function renderChart(kind,cfg,a,e){
+  const chart=document.getElementById("chart");
+  chart.innerHTML="";
+  const defs=svg("defs");
+  defs.innerHTML=`
+    <marker id="arrow-default" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--border)"/></marker>
+    <marker id="arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--primary)"/></marker>`;
+  chart.append(defs);
+  const op=cfg.op, op2=cfg.op2||"==";
+  const add=(...els)=>els.forEach(x=>chart.append(x));
+
+  if(kind==="if"){
+    add(
+      Terminal(cx,36,"Start","start",a),
+      Edge(`M${cx},58 L${cx},92`,"e1",null),
+      Process(cx,114,`x = ${cfg.x}, y = ${cfg.y}`,"init",a),
+      Edge(`M${cx},136 L${cx},190`,"e2",null),
+      Decision(cx,234,`x ${op} y`,"cond",a),
+      Edge(`M${cx-90},234 L 80,234 L 80,330`,"cond-true",e,{x:130,y:222,text:"true"}),
+      Edge(`M${cx+90},234 L 480,234 L 480,470 L ${cx+50},470`,"cond-false",e,{x:430,y:222,text:"false"}),
+      Process(80,352,"Bedingung erfüllt","then",a,140),
+      Edge(`M 80,374 L 80,470 L ${cx-50},470`,"e3",null),
+      Terminal(cx,470,"Ende","end",a),
+    );
+  } else if(kind==="if-else"){
+    add(
+      Terminal(cx,36,"Start","start",a),
+      Edge(`M${cx},58 L${cx},92`,"e1",null),
+      Process(cx,114,`x = ${cfg.x}, y = ${cfg.y}`,"init",a),
+      Edge(`M${cx},136 L${cx},190`,"e2",null),
+      Decision(cx,234,`x ${op} y`,"cond",a),
+      Edge(`M${cx-90},234 L 110,234 L 110,330`,"cond-true",e,{x:160,y:222,text:"true"}),
+      Edge(`M${cx+90},234 L 450,234 L 450,330`,"cond-false",e,{x:400,y:222,text:"false"}),
+      Process(110,352,"if-Block","then",a,160),
+      Process(450,352,"else-Block","else",a,160),
+      Edge(`M 110,374 L 110,470 L ${cx-50},470`,"e3",null),
+      Edge(`M 450,374 L 450,470 L ${cx+50},470`,"e4",null),
+      Terminal(cx,470,"Ende","end",a),
+    );
+  } else if(kind==="if-elseif-else"){
+    add(
+      Terminal(cx,32,"Start","start",a),
+      Edge(`M${cx},54 L${cx},78`,"e1",null),
+      Process(cx,100,`x = ${cfg.x}, y = ${cfg.y}`,"init",a),
+      Edge(`M${cx},122 L${cx},168`,"e2",null),
+      Decision(cx,210,`x ${op} y`,"cond1",a),
+      Edge(`M${cx-90},210 L 70,210 L 70,290`,"cond1-true",e,{x:130,y:198,text:"true"}),
+      Edge(`M${cx},254 L${cx},310`,"cond1-false",e,{x:cx+30,y:280,text:"false"}),
+      Process(70,312,"if-Block","then",a,130),
+      Decision(cx,350,`x ${op2} y`,"cond2",a),
+      Edge(`M${cx+90},350 L 490,350 L 490,420`,"cond2-true",e,{x:430,y:338,text:"true"}),
+      Edge(`M${cx},394 L${cx},438`,"cond2-false",e,{x:cx+35,y:420,text:"false"}),
+      Process(490,442,"else-if-Block","elseif",a,140),
+      Process(cx,460,"else-Block","else",a,150),
+      Edge(`M 70,334 L 70,510 L ${cx-50},510`,"e3",null),
+      Edge(`M ${cx},482 L ${cx},510`,"e4",null),
+      Edge(`M 490,464 L 490,510 L ${cx+50},510`,"e5",null),
+      Terminal(cx,510,"Ende","end",a),
+    );
+  } else if(kind==="for"){
+    add(
+      Terminal(cx,32,"Start","start",a),
+      Edge(`M${cx},54 L${cx},88`,"e1",null),
+      Process(cx,110,`i = ${cfg.x}, y = ${cfg.y}, count = 0`,"init",a,260),
+      Edge(`M${cx},132 L${cx},190`,"e2",null),
+      Decision(cx,236,`i ${op} y`,"cond",a),
+      Edge(`M${cx},280 L${cx},332`,"cond-true",e,{x:cx+32,y:308,text:"true"}),
+      Edge(`M${cx+90},236 L 490,236 L 490,470 L ${cx+50},470`,"cond-false",e,{x:440,y:224,text:"false"}),
+      Process(cx,356,"count++; i++","body",a,200),
+      Edge(`M${cx-100},356 L 60,356 L 60,236 L ${cx-90},236`,"back",e,null,true),
+      Terminal(cx,470,"Ende","end",a),
+    );
+  } else if(kind==="while"){
+    add(
+      Terminal(cx,32,"Start","start",a),
+      Edge(`M${cx},54 L${cx},88`,"e1",null),
+      Process(cx,110,`x = ${cfg.x}, y = ${cfg.y}, count = 0`,"init",a,240),
+      Edge(`M${cx},132 L${cx},190`,"e2",null),
+      Decision(cx,236,`x ${op} y`,"cond",a),
+      svg("text",{x:cx+110,y:210,"font-size":11,fill:"var(--accent)","font-weight":600},"kopfgesteuert"),
+      Edge(`M${cx},280 L${cx},332`,"cond-true",e,{x:cx+32,y:308,text:"true"}),
+      Edge(`M${cx+90},236 L 490,236 L 490,470 L ${cx+50},470`,"cond-false",e,{x:440,y:224,text:"false"}),
+      Process(cx,356,"count++; x++","body",a,200),
+      Edge(`M${cx-100},356 L 60,356 L 60,236 L ${cx-90},236`,"back",e,null,true),
+      Terminal(cx,470,"Ende","end",a),
+    );
+  } else if(kind==="do-while"){
+    add(
+      Terminal(cx,32,"Start","start",a),
+      Edge(`M${cx},54 L${cx},88`,"e1",null),
+      Process(cx,110,`x = ${cfg.x}, y = ${cfg.y}, count = 0`,"init",a,240),
+      Edge(`M${cx},132 L${cx},176`,"e2",null),
+      Process(cx,200,"count++; x++","body",a,200),
+      Edge(`M${cx},222 L${cx},290`,"e3",null),
+      Decision(cx,336,`x ${op} y`,"cond",a),
+      svg("text",{x:cx+110,y:310,"font-size":11,fill:"var(--accent)","font-weight":600},"fußgesteuert"),
+      Edge(`M${cx-90},336 L 60,336 L 60,200 L ${cx-100},200`,"cond-true",e,{x:110,y:324,text:"true"},true),
+      Edge(`M${cx+90},336 L 490,336 L 490,470 L ${cx+50},470`,"cond-false",e,{x:440,y:324,text:"false"}),
+      Terminal(cx,470,"Ende","end",a),
+    );
+  }
+}
+
+//================= STATE =================
+const state={
+  mode:"training",
+  kind:"if",op:">",op2:"==",x:3,y:5,stepIdx:0,
+  quizIdx:0,revealed:new Array(QUIZ_TASKS.length).fill(false),
+  picked:"",feedback:"none",quizStepIdx:0,phase:"predict",
+};
+
+function currentSteps(){return buildSteps({kind:state.kind,op:state.op,op2:state.op2,x:state.x,y:state.y})}
+function quizSteps(){return buildSteps(QUIZ_TASKS[state.quizIdx].cfg)}
+
+function render(){
+  // header buttons
+  const t=document.getElementById("mode-training"), q=document.getElementById("mode-quiz");
+  t.className="btn"+(state.mode==="training"?" active-primary glow-primary":"");
+  q.className="btn"+(state.mode==="quiz"?" active-accent glow-accent":"");
+
+  const right=document.getElementById("right");
+  right.innerHTML="";
+
+  if(state.mode==="training"){
+    const steps=currentSteps();
+    const step=steps[Math.min(state.stepIdx,steps.length-1)];
+    document.getElementById("chart-title").textContent="Flussdiagramm — "+STRUCTURE_LABEL[state.kind];
+    document.getElementById("stepcount").textContent=`Schritt ${Math.min(state.stepIdx+1,steps.length)} / ${steps.length}`;
+    renderChart(state.kind,{kind:state.kind,op:state.op,op2:state.op2,x:state.x,y:state.y},step.node,step.edge||null);
+    renderTraining(right,steps,step);
+  } else {
+    const task=QUIZ_TASKS[state.quizIdx];
+    const qs=quizSteps();
+    const qc=qs[Math.min(state.quizStepIdx,qs.length-1)];
+    document.getElementById("chart-title").textContent="Flussdiagramm — "+STRUCTURE_LABEL[task.kind];
+    document.getElementById("stepcount").textContent=state.phase==="verify"
+      ? `Schritt ${Math.min(state.quizStepIdx+1,qs.length)} / ${qs.length}`
+      : `Aufgabe ${state.quizIdx+1} / ${QUIZ_TASKS.length}`;
+    renderChart(task.kind,task.cfg,state.phase==="verify"?qc.node:null,state.phase==="verify"?(qc.edge||null):null);
+    renderQuiz(right,task,qs,qc);
+  }
+}
+
+function renderTraining(root,steps,step){
+  const finished=state.stepIdx>=steps.length-1;
+  const result=computeResult({kind:state.kind,op:state.op,op2:state.op2,x:state.x,y:state.y});
+  const ctrl=document.createElement("div"); ctrl.className="controls";
+  ctrl.innerHTML=`
+    <div>
+      <div class="label">Kontrollstruktur</div>
+      <select id="sel-kind">${Object.entries(STRUCTURE_LABEL).map(([k,l])=>`<option value="${k}" ${k===state.kind?"selected":""}>${l}</option>`).join("")}</select>
+    </div>
+    <div class="row">
+      <div><div class="label">x (Start)</div>
+        <div class="num"><button data-num="x-">−</button><input type="number" id="in-x" value="${state.x}"><button data-num="x+">+</button></div></div>
+      <div><div class="label">y (Ziel)</div>
+        <div class="num"><button data-num="y-">−</button><input type="number" id="in-y" value="${state.y}"><button data-num="y+">+</button></div></div>
+    </div>
+    <div class="row">
+      <div><div class="label">${state.kind==="if-elseif-else"?"1. Operator":"Operator"}</div>
+        <select id="sel-op">${ALL_OPS.map(o=>`<option ${o===state.op?"selected":""}>${o}</option>`).join("")}</select></div>
+      ${state.kind==="if-elseif-else"?`<div><div class="label">2. Operator</div>
+        <select id="sel-op2">${ALL_OPS.map(o=>`<option ${o===state.op2?"selected":""}>${o}</option>`).join("")}</select></div>`:""}
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary glow-primary" id="btn-step" ${finished?"disabled":""}>▶ Step</button>
+      <button class="btn btn-secondary" id="btn-reset">↻ Reset</button>
+    </div>`;
+  root.append(ctrl);
+
+  const watch=document.createElement("div"); watch.className="watch";
+  const varsEntries=Object.entries(step.vars||{});
+  watch.innerHTML=`
+    <div class="label">Variablen-Watch</div>
+    <div class="vars">${varsEntries.length?varsEntries.map(([k,v])=>`<div class="var"><span class="k">${k}</span><span class="v">${v}</span></div>`).join("")
+      :`<div style="grid-column:span 2;font-size:12px;color:var(--muted-foreground);font-style:italic;padding:8px 0">— noch keine Variablen —</div>`}</div>
+    <div class="log">
+      <div class="head">// Schritt-Log</div>
+      ${steps.slice(0,state.stepIdx+1).map((s,i)=>`<div class="line ${i===state.stepIdx?"cur":""}"><span class="idx">[${String(i).padStart(2,"0")}]</span> ${escapeHtml(s.desc)}</div>`).join("")}
+    </div>
+    ${finished?`<div class="result pop-in"><div class="t">Ergebnis</div><div class="v">x = ${escapeHtml(result)}</div></div>`:""}`;
+  root.append(watch);
+
+  // bindings
+  ctrl.querySelector("#sel-kind").onchange=e=>{state.kind=e.target.value;state.stepIdx=0;render()};
+  const opEl=ctrl.querySelector("#sel-op"); if(opEl) opEl.onchange=e=>{state.op=e.target.value;state.stepIdx=0;render()};
+  const op2El=ctrl.querySelector("#sel-op2"); if(op2El) op2El.onchange=e=>{state.op2=e.target.value;state.stepIdx=0;render()};
+  ctrl.querySelector("#in-x").onchange=e=>{state.x=parseInt(e.target.value)||0;state.stepIdx=0;render()};
+  ctrl.querySelector("#in-y").onchange=e=>{state.y=parseInt(e.target.value)||0;state.stepIdx=0;render()};
+  ctrl.querySelectorAll("[data-num]").forEach(b=>b.onclick=()=>{
+    const d=b.dataset.num;
+    if(d==="x-") state.x--; else if(d==="x+") state.x++;
+    else if(d==="y-") state.y--; else if(d==="y+") state.y++;
+    state.stepIdx=0; render();
+  });
+  ctrl.querySelector("#btn-step").onclick=()=>{if(state.stepIdx<steps.length-1){state.stepIdx++;render()}};
+  ctrl.querySelector("#btn-reset").onclick=()=>{state.stepIdx=0;render()};
+}
+
+function renderQuiz(root,task,qs,qc){
+  const allDone=state.revealed.every(Boolean);
+  const verifyDone=state.quizStepIdx>=qs.length-1;
+
+  const word=document.createElement("div"); word.className="panel"; word.style.padding="12px"; word.style.flex="0 0 auto";
+  word.innerHTML=`<div class="label">Lösungswort</div>
+    <div class="word">${QUIZ_WORD.split("").map((ch,i)=>`<div class="box ${state.revealed[i]?"on pop-in":""}">${state.revealed[i]?ch:"?"}</div>`).join("")}</div>`;
+  root.append(word);
+
+  const q=document.createElement("div"); q.className="panel qpanel"; q.style.padding="12px";
+  let body=`<div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="label">Aufgabe ${state.quizIdx+1} / ${QUIZ_TASKS.length}</div>
+      <span class="qbadge">${STRUCTURE_LABEL[task.kind]}</span>
+    </div>
+    <p class="q">${escapeHtml(task.question)}</p>`;
+  if(state.phase==="predict"){
+    body+=`<div class="opts">${task.options.map(o=>`<button class="opt ${state.picked===o?"sel":""}" data-opt="${escapeHtml(o)}">${escapeHtml(o)}</button>`).join("")}</div>`;
+    if(state.feedback==="wrong") body+=`<div class="err pop-in">✗ Leider falsch — denke nochmal nach und versuche es erneut.</div>`;
+    body+=`<div class="spacer"></div><button class="btn btn-accent glow-accent" id="btn-submit" style="width:100%;padding:10px;margin-top:12px" ${state.picked?"":"disabled"}>▶ Start — Vorhersage prüfen</button>`;
+  } else {
+    body+=`<div class="ok pop-in">✓ Richtig! Buchstabe <b>«${task.letter}»</b> freigeschaltet.</div>
+      <div class="vars" style="margin-top:8px;font-size:12px">${Object.entries(qc.vars||{}).map(([k,v])=>`<div class="var"><span class="k">${k}</span><span class="v">${v}</span></div>`).join("")}</div>
+      <div class="log" style="font-size:11px">${qs.slice(0,state.quizStepIdx+1).map((s,i)=>`<div class="line ${i===state.quizStepIdx?"cur":""}"><span class="idx">[${String(i).padStart(2,"0")}]</span> ${escapeHtml(s.desc)}</div>`).join("")}</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-primary" id="btn-qstep" style="flex:1;padding:8px" ${verifyDone?"disabled":""}>▶ Step</button>
+        <button class="btn btn-accent glow-accent" id="btn-qnext" style="flex:1;padding:8px" ${state.quizIdx>=QUIZ_TASKS.length-1&&!allDone?"disabled":""}>${state.quizIdx<QUIZ_TASKS.length-1?"Weiter →":(allDone?"✓ Geschafft!":"—")}</button>
+      </div>
+      ${allDone?`<div class="done pop-in">🎉 Lösungswort: ${QUIZ_WORD}</div>`:""}`;
+  }
+  q.innerHTML=body;
+  root.append(q);
+
+  q.querySelectorAll("[data-opt]").forEach(b=>b.onclick=()=>{
+    state.picked=b.dataset.opt; state.feedback="none"; render();
+  });
+  const sub=q.querySelector("#btn-submit");
+  if(sub) sub.onclick=()=>{
+    if(!state.picked) return;
+    if(state.picked===task.correct){
+      state.feedback="right"; state.revealed[state.quizIdx]=true;
+      state.phase="verify"; state.quizStepIdx=0;
+    } else state.feedback="wrong";
+    render();
+  };
+  const stepBtn=q.querySelector("#btn-qstep");
+  if(stepBtn) stepBtn.onclick=()=>{if(state.quizStepIdx<qs.length-1){state.quizStepIdx++;render()}};
+  const nextBtn=q.querySelector("#btn-qnext");
+  if(nextBtn) nextBtn.onclick=()=>{
+    if(state.quizIdx<QUIZ_TASKS.length-1){
+      state.quizIdx++; state.picked=""; state.feedback="none"; state.phase="predict"; state.quizStepIdx=0;
+      render();
+    }
+  };
+}
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+
+document.getElementById("mode-training").onclick=()=>{state.mode="training";render()};
+document.getElementById("mode-quiz").onclick=()=>{
+  state.mode="quiz"; state.quizStepIdx=0; state.phase="predict"; state.picked=""; state.feedback="none"; render();
+};
+
+
+/** Einmal beim Laden: Bilder, Menüs, Hub-Anbindung. */
+function init() {
+    setupHubBridge();
+}
+
+/**
+ * Hub: Nach ready() kommt hub:init → onInit lädt gameData.
+ */
+function setupHubBridge() {
+    console.log('[Game] Setup "Hub-Bridge"');
+
+    /**
+     * Admin Self-Test (hub:selftest): kurze DOM-/Daten-Check, Logs für das Panel.
+     */
+    hubBridge.onSelfTest = async function () {
+        var logs = [];
+        var ok = true;
+
+        await Promise.resolve();
+        logs.push('Self-Test gestartet (async)');
+
+        if (typeof hubBridge.updateProgress !== 'function' || typeof hubBridge.complete !== 'function') {
+            ok = false;
+            logs.push('FAIL: hubBridge API unvollständig');
+        } else {
+            logs.push('OK: hubBridge Methoden');
+        }
+
+        logs.push(ok ? 'Ergebnis: bestanden' : 'Ergebnis: fehlgeschlagen');
+        return { passed: ok, logs: logs };
+    };
+
+    hubBridge.ready();
+}
+
+/* Spiel beenden => Infos anzeigen und dem Hub Ende (complete) mitteilen*/
+function endGame() {
+    var finalScore = 100;
+    console.log('[Game] Spiel beendet');
+    hubBridge.sendMessage('Spiel beendet! Score: ' + finalScore + '%', 'success');
+    hubBridge.complete(finalScore, { score: finalScore });
+}
+
+/* ============== Boot ============== */
+render();
+console.log("[Game] Start Hub-Init");
+window.addEventListener('DOMContentLoaded', init);
+console.log("[Game] Done Hub-Init");
+</script>
+</body>
+</html>
